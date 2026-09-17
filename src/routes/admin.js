@@ -41,7 +41,7 @@ router.post('/shipments', async (req, res, next) => {
       tracking_number, status, status_label, status_icon,
       service, weight, origin, destination, current_location,
       estimated_delivery, delivered_at, recipient, progress_step,
-      map_lat, map_lng,
+      map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
     } = req.body;
 
     // Fix #9: validate required fields
@@ -87,6 +87,10 @@ router.post('/shipments', async (req, res, next) => {
       progress_step: step,
       map_lat: map_lat || null,
       map_lng: map_lng || null,
+      origin_lat: origin_lat || null,
+      origin_lng: origin_lng || null,
+      dest_lat:   dest_lat   || null,
+      dest_lng:   dest_lng   || null,
     }]).select().single();
 
     if (error) {
@@ -107,6 +111,7 @@ router.put('/shipments/:id', async (req, res, next) => {
       status, status_label, status_icon, service, weight,
       origin, destination, current_location, estimated_delivery,
       delivered_at, recipient, progress_step, map_lat, map_lng,
+      origin_lat, origin_lng, dest_lat, dest_lng,
     } = req.body;
 
     const { data, error } = await supabase
@@ -121,6 +126,10 @@ router.put('/shipments/:id', async (req, res, next) => {
         progress_step,
         map_lat: map_lat || null,
         map_lng: map_lng || null,
+        origin_lat: origin_lat || null,
+        origin_lng: origin_lng || null,
+        dest_lat:   dest_lat   || null,
+        dest_lng:   dest_lng   || null,
       })
       .eq('id', req.params.id)
       .select().single();
