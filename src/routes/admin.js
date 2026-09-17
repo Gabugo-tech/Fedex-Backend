@@ -44,18 +44,58 @@ router.post('/shipments', async (req, res, next) => {
       map_lat, map_lng,
     } = req.body;
 
+    // Fix #9: validate required fields
+    const missing = [];
+    if (!tracking_number?.trim()) missing.push('tracking_number');
+    if (!status?.trim())          missing.push('status');
+    if (!status_label?.trim())    missing.push('status_label');
+    if (!service?.trim())         missing.push('service');
+    if (!origin?.trim())          missing.push('origin');
+    if (!destination?.trim())     missing.push('destination');
+    if (!current_location?.trim()) missing.push('current_location');
+
+    if (missing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Missing required fields: ${missing.join(', ')}`,
+      });
+    }
+
+    const validStatuses = ['pending', 'in-transit', 'out-delivery', 'delivered', 'exception'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const step = parseInt(progress_step);
+    if (isNaN(step) || step < 0 || step > 4) {
+      return res.status(400).json({ success: false, error: 'progress_step must be 0–4' });
+    }
+
     const { data, error } = await supabase.from('shipments').insert([{
-      tracking_number: tracking_number.toUpperCase(),
-      status, status_label, status_icon: status_icon || 'fa-box',
-      service, weight, origin, destination, current_location,
-      estimated_delivery, delivered_at: delivered_at || null,
+      tracking_number: tracking_number.trim().toUpperCase(),
+      status,
+      status_label,
+      status_icon: status_icon || 'fa-box',
+      service,
+      weight: weight || null,
+      origin,
+      destination,
+      current_location,
+      estimated_delivery: estimated_delivery || null,
+      delivered_at: delivered_at || null,
       recipient: recipient || null,
-      progress_step: progress_step || 0,
+      progress_step: step,
       map_lat: map_lat || null,
       map_lng: map_lng || null,
     }]).select().single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle duplicate tracking number gracefully
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, error: 'Tracking number already exists' });
+      }
+      throw error;
+    }
     res.status(201).json({ success: true, shipment: data });
   } catch (err) { next(err); }
 });
@@ -73,8 +113,10 @@ router.put('/shipments/:id', async (req, res, next) => {
       .from('shipments')
       .update({
         status, status_label, status_icon,
-        service, weight, origin, destination, current_location,
-        estimated_delivery, delivered_at: delivered_at || null,
+        service, weight: weight || null,
+        origin, destination, current_location,
+        estimated_delivery: estimated_delivery || null,
+        delivered_at: delivered_at || null,
         recipient: recipient || null,
         progress_step,
         map_lat: map_lat || null,
@@ -84,6 +126,7 @@ router.put('/shipments/:id', async (req, res, next) => {
       .select().single();
 
     if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, error: 'Shipment not found' });
     res.json({ success: true, shipment: data });
   } catch (err) { next(err); }
 });
@@ -93,7 +136,7 @@ router.put('/shipments/:id/location', async (req, res, next) => {
   try {
     const { map_lat, map_lng, current_location } = req.body;
     if (!map_lat || !map_lng) {
-      return res.status(400).json({ success: false, error: 'map_lat and map_lng required' });
+      return res.status(400).json({ success: false, error: 'map_lat and map_lng are required' });
     }
 
     const { data, error } = await supabase
@@ -121,7 +164,11 @@ router.post('/shipments/:id/events', async (req, res, next) => {
   try {
     const { status, location, event_time, is_latest } = req.body;
 
-    // If is_latest, clear previous latest flag
+    if (!status?.trim() || !location?.trim()) {
+      return res.status(400).json({ success: false, error: 'status and location are required' });
+    }
+
+    // If is_latest, clear previous latest flag first
     if (is_latest) {
       await supabase.from('tracking_events')
         .update({ is_latest: false })
@@ -130,7 +177,8 @@ router.post('/shipments/:id/events', async (req, res, next) => {
 
     const { data, error } = await supabase.from('tracking_events').insert([{
       shipment_id: req.params.id,
-      status, location,
+      status: status.trim(),
+      location: location.trim(),
       event_time: event_time || new Date().toISOString(),
       is_latest: is_latest || false,
     }]).select().single();
