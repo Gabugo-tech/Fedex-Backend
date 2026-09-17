@@ -54,6 +54,8 @@ router.get('/', async (req, res, next) => {
           delivered_at: shipment.delivered_at,
           recipient: shipment.recipient,
           progress_step: shipment.progress_step,
+          map_lat: shipment.map_lat || null,
+          map_lng: shipment.map_lng || null,
           timeline: events.map(e => ({
             date: new Date(e.event_time).toLocaleString('en-US', {
               month: 'short', day: 'numeric', year: 'numeric',
