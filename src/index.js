@@ -63,5 +63,5 @@ app.use((req, res) =>
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`🚀 FedEx Tracker API running on port ${PORT}`);
+  console.log(`🚀 PulsTrack API running on port ${PORT}`);
 });
