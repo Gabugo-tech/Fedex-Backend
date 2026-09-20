@@ -74,6 +74,7 @@ router.get('/', async (req, res, next) => {
         origin_lng:       shipment.origin_lng || null,
         dest_lat:         shipment.dest_lat   || null,
         dest_lng:         shipment.dest_lng   || null,
+        item_image_url:   shipment.item_image_url || null,
         timeline: events.map(e => ({
           date: new Date(e.event_time).toLocaleString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric',

@@ -206,4 +206,83 @@ router.delete('/events/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ===== UPLOAD item image =====
+router.post('/shipments/:id/image', async (req, res, next) => {
+  try {
+    // Expect base64 encoded image in body: { base64, mimeType }
+    const { base64, mimeType } = req.body;
+
+    if (!base64 || !mimeType) {
+      return res.status(400).json({ success: false, error: 'base64 and mimeType are required' });
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({ success: false, error: 'Only JPEG, PNG, WebP and GIF images are allowed' });
+    }
+
+    // Decode base64 to buffer
+    const buffer = Buffer.from(base64, 'base64');
+
+    // Max 5MB
+    if (buffer.byteLength > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'Image must be under 5MB' });
+    }
+
+    const ext      = mimeType.split('/')[1];
+    const fileName = `${req.params.id}-${Date.now()}.${ext}`;
+
+    // Upload to Supabase Storage
+    const { error: uploadErr } = await supabase.storage
+      .from('shipment-images')
+      .upload(fileName, buffer, {
+        contentType: mimeType,
+        upsert: true,
+      });
+
+    if (uploadErr) throw uploadErr;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('shipment-images')
+      .getPublicUrl(fileName);
+
+    const imageUrl = urlData.publicUrl;
+
+    // Save URL to shipment record
+    const { data, error: updateErr } = await supabase
+      .from('shipments')
+      .update({ item_image_url: imageUrl })
+      .eq('id', req.params.id)
+      .select().single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ success: true, item_image_url: imageUrl, shipment: data });
+  } catch (err) { next(err); }
+});
+
+// ===== DELETE item image =====
+router.delete('/shipments/:id/image', async (req, res, next) => {
+  try {
+    // Get current image URL
+    const { data: shipment } = await supabase
+      .from('shipments').select('item_image_url').eq('id', req.params.id).single();
+
+    if (shipment?.item_image_url) {
+      // Extract filename from URL
+      const parts    = shipment.item_image_url.split('/');
+      const fileName = parts[parts.length - 1];
+      await supabase.storage.from('shipment-images').remove([fileName]);
+    }
+
+    // Clear URL from shipment
+    await supabase.from('shipments')
+      .update({ item_image_url: null })
+      .eq('id', req.params.id);
+
+    res.json({ success: true, message: 'Image deleted' });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
