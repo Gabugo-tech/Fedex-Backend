@@ -42,6 +42,7 @@ router.post('/shipments', async (req, res, next) => {
       service, weight, origin, destination, current_location,
       estimated_delivery, delivered_at, recipient, progress_step,
       map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
+      pickup_time, delivery_time,
     } = req.body;
 
     // Fix #9: validate required fields
@@ -91,6 +92,8 @@ router.post('/shipments', async (req, res, next) => {
       origin_lng: origin_lng || null,
       dest_lat:   dest_lat   || null,
       dest_lng:   dest_lng   || null,
+      pickup_time:   pickup_time   || null,
+      delivery_time: delivery_time || null,
     }]).select().single();
 
     if (error) {
@@ -112,6 +115,7 @@ router.put('/shipments/:id', async (req, res, next) => {
       origin, destination, current_location, estimated_delivery,
       delivered_at, recipient, progress_step, map_lat, map_lng,
       origin_lat, origin_lng, dest_lat, dest_lng,
+      pickup_time, delivery_time,
     } = req.body;
 
     const { data, error } = await supabase
@@ -130,6 +134,8 @@ router.put('/shipments/:id', async (req, res, next) => {
         origin_lng: origin_lng || null,
         dest_lat:   dest_lat   || null,
         dest_lng:   dest_lng   || null,
+        pickup_time:   pickup_time   || null,
+        delivery_time: delivery_time || null,
       })
       .eq('id', req.params.id)
       .select().single();
