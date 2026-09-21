@@ -39,13 +39,13 @@ router.post('/shipments', async (req, res, next) => {
   try {
     const {
       tracking_number, status, status_label, status_icon,
-      service, weight, origin, destination, current_location,
+      service, weight, origin, destination,
       estimated_delivery, delivered_at, recipient, progress_step,
       map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
       pickup_time, delivery_time, item_name,
     } = req.body;
 
-    // Fix #9: validate required fields
+    // Validate required fields
     const missing = [];
     if (!tracking_number?.trim()) missing.push('tracking_number');
     if (!status?.trim())          missing.push('status');
@@ -53,14 +53,9 @@ router.post('/shipments', async (req, res, next) => {
     if (!service?.trim())         missing.push('service');
     if (!origin?.trim())          missing.push('origin');
     if (!destination?.trim())     missing.push('destination');
-    // current_location is optional — default to origin if not provided
-    const current_location = req.body.current_location?.trim() || origin?.trim();
 
     if (missing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Missing required fields: ${missing.join(', ')}`,
-      });
+      return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
     }
 
     const validStatuses = ['pending', 'in-transit', 'out-delivery', 'delivered', 'exception'];
@@ -73,33 +68,35 @@ router.post('/shipments', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'progress_step must be 0–4' });
     }
 
+    // current_location defaults to origin if not provided
+    const resolvedLocation = req.body.current_location?.trim() || origin.trim();
+
     const { data, error } = await supabase.from('shipments').insert([{
       tracking_number: tracking_number.trim().toUpperCase(),
       status,
       status_label,
       status_icon: status_icon || 'fa-box',
       service,
-      weight: weight || null,
+      weight:              weight              || null,
       origin,
       destination,
-      current_location,
-      estimated_delivery: estimated_delivery || null,
-      delivered_at: delivered_at || null,
-      recipient: recipient || null,
-      progress_step: step,
-      map_lat: map_lat || null,
-      map_lng: map_lng || null,
-      origin_lat: origin_lat || null,
-      origin_lng: origin_lng || null,
-      dest_lat:   dest_lat   || null,
-      dest_lng:   dest_lng   || null,
-      pickup_time:   pickup_time   || null,
-      delivery_time: delivery_time || null,
-      item_name:     item_name     || null,
+      current_location:    resolvedLocation,
+      estimated_delivery:  estimated_delivery  || null,
+      delivered_at:        delivered_at        || null,
+      recipient:           recipient           || null,
+      progress_step:       step,
+      map_lat:             map_lat             || null,
+      map_lng:             map_lng             || null,
+      origin_lat:          origin_lat          || null,
+      origin_lng:          origin_lng          || null,
+      dest_lat:            dest_lat            || null,
+      dest_lng:            dest_lng            || null,
+      pickup_time:         pickup_time         || null,
+      delivery_time:       delivery_time       || null,
+      item_name:           item_name           || null,
     }]).select().single();
 
     if (error) {
-      // Handle duplicate tracking number gracefully
       if (error.code === '23505') {
         return res.status(409).json({ success: false, error: 'Tracking number already exists' });
       }
@@ -114,45 +111,49 @@ router.put('/shipments/:id', async (req, res, next) => {
   try {
     const {
       status, status_label, status_icon, service, weight,
-      origin, destination, current_location, estimated_delivery,
+      origin, destination, estimated_delivery,
       delivered_at, recipient, progress_step, map_lat, map_lng,
       origin_lat, origin_lng, dest_lat, dest_lng,
       pickup_time, delivery_time, item_name,
     } = req.body;
 
-    // Fix: validate required fields on update too
+    // Validate required fields
     const missing = [];
-    if (!status?.trim())           missing.push('status');
-    if (!status_label?.trim())     missing.push('status_label');
-    if (!service?.trim())          missing.push('service');
-    if (!origin?.trim())           missing.push('origin');
-    if (!destination?.trim())      missing.push('destination');
-    // current_location is optional — default to origin if not provided
-    const resolved_current_location = current_location?.trim() || origin?.trim();
+    if (!status?.trim())       missing.push('status');
+    if (!status_label?.trim()) missing.push('status_label');
+    if (!service?.trim())      missing.push('service');
+    if (!origin?.trim())       missing.push('origin');
+    if (!destination?.trim())  missing.push('destination');
+
     if (missing.length > 0) {
       return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
     }
+
+    // current_location defaults to origin if not provided
+    const resolvedLocation = req.body.current_location?.trim() || origin.trim();
 
     const { data, error } = await supabase
       .from('shipments')
       .update({
         status, status_label, status_icon,
-        service, weight: weight || null,
-        origin, destination,
-        current_location: resolved_current_location,
+        service,
+        weight:             weight             || null,
+        origin,
+        destination,
+        current_location:   resolvedLocation,
         estimated_delivery: estimated_delivery || null,
-        delivered_at: delivered_at || null,
-        recipient: recipient || null,
+        delivered_at:       delivered_at       || null,
+        recipient:          recipient          || null,
         progress_step,
-        map_lat: map_lat || null,
-        map_lng: map_lng || null,
-        origin_lat: origin_lat || null,
-        origin_lng: origin_lng || null,
-        dest_lat:   dest_lat   || null,
-        dest_lng:   dest_lng   || null,
-        pickup_time:   pickup_time   || null,
-        delivery_time: delivery_time || null,
-        item_name:     item_name     || null,
+        map_lat:            map_lat            || null,
+        map_lng:            map_lng            || null,
+        origin_lat:         origin_lat         || null,
+        origin_lng:         origin_lng         || null,
+        dest_lat:           dest_lat           || null,
+        dest_lng:           dest_lng           || null,
+        pickup_time:        pickup_time        || null,
+        delivery_time:      delivery_time      || null,
+        item_name:          item_name          || null,
       })
       .eq('id', req.params.id)
       .select().single();
@@ -200,7 +201,6 @@ router.post('/shipments/:id/events', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'status and location are required' });
     }
 
-    // If is_latest, clear previous latest flag first
     if (is_latest) {
       await supabase.from('tracking_events')
         .update({ is_latest: false })
@@ -208,11 +208,11 @@ router.post('/shipments/:id/events', async (req, res, next) => {
     }
 
     const { data, error } = await supabase.from('tracking_events').insert([{
-      shipment_id: req.params.id,
-      status: status.trim(),
-      location: location.trim(),
-      event_time: event_time || new Date().toISOString(),
-      is_latest: is_latest || false,
+      shipment_id:  req.params.id,
+      status:       status.trim(),
+      location:     location.trim(),
+      event_time:   event_time || new Date().toISOString(),
+      is_latest:    is_latest  || false,
     }]).select().single();
 
     if (error) throw error;
@@ -232,7 +232,6 @@ router.delete('/events/:id', async (req, res, next) => {
 // ===== UPLOAD item image =====
 router.post('/shipments/:id/image', async (req, res, next) => {
   try {
-    // Expect base64 encoded image in body: { base64, mimeType }
     const { base64, mimeType } = req.body;
 
     if (!base64 || !mimeType) {
@@ -244,10 +243,7 @@ router.post('/shipments/:id/image', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Only JPEG, PNG, WebP and GIF images are allowed' });
     }
 
-    // Decode base64 to buffer
     const buffer = Buffer.from(base64, 'base64');
-
-    // Max 5MB
     if (buffer.byteLength > 5 * 1024 * 1024) {
       return res.status(400).json({ success: false, error: 'Image must be under 5MB' });
     }
@@ -255,24 +251,18 @@ router.post('/shipments/:id/image', async (req, res, next) => {
     const ext      = mimeType.split('/')[1];
     const fileName = `${req.params.id}-${Date.now()}.${ext}`;
 
-    // Upload to Supabase Storage
     const { error: uploadErr } = await supabase.storage
       .from('shipment-images')
-      .upload(fileName, buffer, {
-        contentType: mimeType,
-        upsert: true,
-      });
+      .upload(fileName, buffer, { contentType: mimeType, upsert: true });
 
     if (uploadErr) throw uploadErr;
 
-    // Get public URL
     const { data: urlData } = supabase.storage
       .from('shipment-images')
       .getPublicUrl(fileName);
 
     const imageUrl = urlData.publicUrl;
 
-    // Save URL to shipment record
     const { data, error: updateErr } = await supabase
       .from('shipments')
       .update({ item_image_url: imageUrl })
@@ -288,18 +278,15 @@ router.post('/shipments/:id/image', async (req, res, next) => {
 // ===== DELETE item image =====
 router.delete('/shipments/:id/image', async (req, res, next) => {
   try {
-    // Get current image URL
     const { data: shipment } = await supabase
       .from('shipments').select('item_image_url').eq('id', req.params.id).single();
 
     if (shipment?.item_image_url) {
-      // Extract filename from URL
       const parts    = shipment.item_image_url.split('/');
       const fileName = parts[parts.length - 1];
       await supabase.storage.from('shipment-images').remove([fileName]);
     }
 
-    // Clear URL from shipment
     await supabase.from('shipments')
       .update({ item_image_url: null })
       .eq('id', req.params.id);
