@@ -53,7 +53,8 @@ router.post('/shipments', async (req, res, next) => {
     if (!service?.trim())         missing.push('service');
     if (!origin?.trim())          missing.push('origin');
     if (!destination?.trim())     missing.push('destination');
-    if (!current_location?.trim()) missing.push('current_location');
+    // current_location is optional — default to origin if not provided
+    const current_location = req.body.current_location?.trim() || origin?.trim();
 
     if (missing.length > 0) {
       return res.status(400).json({
@@ -126,7 +127,8 @@ router.put('/shipments/:id', async (req, res, next) => {
     if (!service?.trim())          missing.push('service');
     if (!origin?.trim())           missing.push('origin');
     if (!destination?.trim())      missing.push('destination');
-    if (!current_location?.trim()) missing.push('current_location');
+    // current_location is optional — default to origin if not provided
+    const resolved_current_location = current_location?.trim() || origin?.trim();
     if (missing.length > 0) {
       return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
     }
@@ -136,7 +138,8 @@ router.put('/shipments/:id', async (req, res, next) => {
       .update({
         status, status_label, status_icon,
         service, weight: weight || null,
-        origin, destination, current_location,
+        origin, destination,
+        current_location: resolved_current_location,
         estimated_delivery: estimated_delivery || null,
         delivered_at: delivered_at || null,
         recipient: recipient || null,
