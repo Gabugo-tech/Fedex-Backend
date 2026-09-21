@@ -42,7 +42,7 @@ router.post('/shipments', async (req, res, next) => {
       service, weight, origin, destination, current_location,
       estimated_delivery, delivered_at, recipient, progress_step,
       map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
-      pickup_time, delivery_time,
+      pickup_time, delivery_time, item_name,
     } = req.body;
 
     // Fix #9: validate required fields
@@ -94,6 +94,7 @@ router.post('/shipments', async (req, res, next) => {
       dest_lng:   dest_lng   || null,
       pickup_time:   pickup_time   || null,
       delivery_time: delivery_time || null,
+      item_name:     item_name     || null,
     }]).select().single();
 
     if (error) {
@@ -115,7 +116,7 @@ router.put('/shipments/:id', async (req, res, next) => {
       origin, destination, current_location, estimated_delivery,
       delivered_at, recipient, progress_step, map_lat, map_lng,
       origin_lat, origin_lng, dest_lat, dest_lng,
-      pickup_time, delivery_time,
+      pickup_time, delivery_time, item_name,
     } = req.body;
 
     // Fix: validate required fields on update too
@@ -148,6 +149,7 @@ router.put('/shipments/:id', async (req, res, next) => {
         dest_lng:   dest_lng   || null,
         pickup_time:   pickup_time   || null,
         delivery_time: delivery_time || null,
+        item_name:     item_name     || null,
       })
       .eq('id', req.params.id)
       .select().single();
