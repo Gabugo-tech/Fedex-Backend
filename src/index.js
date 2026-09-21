@@ -15,17 +15,18 @@ const PORT = process.env.PORT || 4000;
 app.use(helmet());
 
 // CORS — allow all Vercel previews + explicit frontend URL
+// Fix: lock CORS to known origins, not all of vercel.app
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4173',
   process.env.FRONTEND_URL,
+  'https://pulstrack-company.vercel.app',
+  'https://droppin-tracker.vercel.app',
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // curl / mobile
-    // allow any vercel.app subdomain for preview deploys
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
@@ -46,7 +47,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Fix: allow base64 image uploads
 
 // ===== ROUTES =====
 app.get('/health', (req, res) =>

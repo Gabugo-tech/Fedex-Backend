@@ -118,6 +118,18 @@ router.put('/shipments/:id', async (req, res, next) => {
       pickup_time, delivery_time,
     } = req.body;
 
+    // Fix: validate required fields on update too
+    const missing = [];
+    if (!status?.trim())           missing.push('status');
+    if (!status_label?.trim())     missing.push('status_label');
+    if (!service?.trim())          missing.push('service');
+    if (!origin?.trim())           missing.push('origin');
+    if (!destination?.trim())      missing.push('destination');
+    if (!current_location?.trim()) missing.push('current_location');
+    if (missing.length > 0) {
+      return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
+    }
+
     const { data, error } = await supabase
       .from('shipments')
       .update({

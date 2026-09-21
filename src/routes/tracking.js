@@ -10,11 +10,11 @@ router.get('/', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No tracking numbers provided' });
     }
 
-    // Parse comma/space separated, max 5
+    // Parse comma/space separated, max 5, max 60 chars each
     const numbers = raw
       .split(/[\s,]+/)
       .map(n => n.trim().toUpperCase())
-      .filter(Boolean)
+      .filter(n => n.length > 0 && n.length <= 60)
       .slice(0, 5);
 
     // Fetch all matching shipments in one query
