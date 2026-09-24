@@ -129,6 +129,14 @@ router.put('/shipments/:id', async (req, res, next) => {
       return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
     }
 
+    // Fix #50: validate progress_step on PUT too
+    if (progress_step !== undefined) {
+      const step = parseInt(progress_step);
+      if (isNaN(step) || step < 0 || step > 4) {
+        return res.status(400).json({ success: false, error: 'progress_step must be 0–4' });
+      }
+    }
+
     // current_location defaults to origin if not provided
     const resolvedLocation = req.body.current_location?.trim() || origin.trim();
 
@@ -284,7 +292,10 @@ router.delete('/shipments/:id/image', async (req, res, next) => {
     if (shipment?.item_image_url) {
       const parts    = shipment.item_image_url.split('/');
       const fileName = parts[parts.length - 1];
-      await supabase.storage.from('shipment-images').remove([fileName]);
+      // Fix #18: check storage delete error
+      const { error: removeErr } = await supabase.storage
+        .from('shipment-images').remove([fileName]);
+      if (removeErr) console.error('[Storage] Delete failed:', removeErr.message);
     }
 
     await supabase.from('shipments')

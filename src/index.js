@@ -35,7 +35,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.options('*', cors()); // pre-flight
+app.options('*', cors()); // Fix #4: remove — CORS middleware handles preflight automatically
 
 // Rate limiting
 const limiter = rateLimit({

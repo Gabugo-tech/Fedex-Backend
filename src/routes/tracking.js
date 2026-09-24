@@ -83,6 +83,7 @@ router.get('/', async (req, res, next) => {
             month: 'short', day: 'numeric', year: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true,
           }),
+          id:       e.id,
           status:   e.status,
           location: e.location,
           latest:   e.is_latest,
