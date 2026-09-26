@@ -28,7 +28,12 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS blocked: ${origin}`));
+    // Return 403 silently — don't expose the blocked origin in production
+    const err = new Error(
+      process.env.NODE_ENV === 'production' ? 'Forbidden' : `CORS blocked: ${origin}`
+    );
+    err.status = 403;
+    callback(err);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
