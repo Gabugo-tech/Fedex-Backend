@@ -1,6 +1,10 @@
 const supabase = require('../db/supabase');
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nnanwubagabriel@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+
+if (!ADMIN_EMAIL) {
+  console.error('[adminAuth] ADMIN_EMAIL env var is not set. All admin requests will be rejected.');
+}
 
 async function adminAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -18,7 +22,7 @@ async function adminAuth(req, res, next) {
     if (error || !user) {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' });
     }
-    if (user.email !== ADMIN_EMAIL) {
+    if (!ADMIN_EMAIL || user.email !== ADMIN_EMAIL) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
     req.user = user;
