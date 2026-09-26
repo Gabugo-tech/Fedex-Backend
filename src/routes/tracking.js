@@ -27,7 +27,6 @@ router.get('/', async (req, res, next) => {
 
     if (shipErr) throw shipErr;
 
-    // Fix #10: fetch ALL events for found shipments in ONE query (no N+1)
     const foundIds = shipments.map(s => s.id);
     let allEvents = [];
 
@@ -112,3 +111,4 @@ router.get('/', async (req, res, next) => {
 });
 
 module.exports = router;
+

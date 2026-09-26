@@ -40,8 +40,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.options('*', cors()); // Fix #4: remove — CORS middleware handles preflight automatically
-
+app.options('*', cors());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -71,3 +70,4 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 PulsTrack API running on port ${PORT}`);
 });
+

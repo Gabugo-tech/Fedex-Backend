@@ -9,7 +9,6 @@ if (!ADMIN_EMAIL) {
 async function adminAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
 
-  // Fix #27: case-insensitive Bearer token extraction
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   const token = match ? match[1].trim() : '';
 
@@ -33,3 +32,4 @@ async function adminAuth(req, res, next) {
 }
 
 module.exports = adminAuth;
+
