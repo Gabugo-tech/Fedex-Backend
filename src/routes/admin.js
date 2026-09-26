@@ -6,6 +6,31 @@ const adminAuth = require('../middleware/adminAuth');
 // All admin routes require auth
 router.use(adminAuth);
 
+// ── Helper: extract all new Delivio-style fields from request body ──────────
+function extractFields(body) {
+  const {
+    tracking_number, status, status_label, status_icon,
+    service, weight, origin, destination,
+    estimated_delivery, delivered_at, recipient, progress_step,
+    map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
+    pickup_time, delivery_time, item_name,
+    // New Delivio fields
+    sender_name, sender_phone, sender_email,
+    receiver_name, receiver_phone, receiver_email, receiver_address,
+    package_size, declared_amount, special_note, service_tags,
+  } = body;
+  return {
+    tracking_number, status, status_label, status_icon,
+    service, weight, origin, destination,
+    estimated_delivery, delivered_at, recipient, progress_step,
+    map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
+    pickup_time, delivery_time, item_name,
+    sender_name, sender_phone, sender_email,
+    receiver_name, receiver_phone, receiver_email, receiver_address,
+    package_size, declared_amount, special_note, service_tags,
+  };
+}
+
 // ===== GET all shipments =====
 router.get('/shipments', async (req, res, next) => {
   try {
@@ -37,13 +62,17 @@ router.get('/shipments/:id', async (req, res, next) => {
 // ===== CREATE shipment =====
 router.post('/shipments', async (req, res, next) => {
   try {
+    const fields = extractFields(req.body);
     const {
       tracking_number, status, status_label, status_icon,
       service, weight, origin, destination,
       estimated_delivery, delivered_at, recipient, progress_step,
       map_lat, map_lng, origin_lat, origin_lng, dest_lat, dest_lng,
       pickup_time, delivery_time, item_name,
-    } = req.body;
+      sender_name, sender_phone, sender_email,
+      receiver_name, receiver_phone, receiver_email, receiver_address,
+      package_size, declared_amount, special_note, service_tags,
+    } = fields;
 
     // Validate required fields
     const missing = [];
@@ -68,32 +97,43 @@ router.post('/shipments', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'progress_step must be 0–4' });
     }
 
-    // current_location defaults to origin if not provided
     const resolvedLocation = req.body.current_location?.trim() || origin.trim();
 
     const { data, error } = await supabase.from('shipments').insert([{
-      tracking_number: tracking_number.trim().toUpperCase(),
+      tracking_number:  tracking_number.trim().toUpperCase(),
       status,
       status_label,
-      status_icon: status_icon || 'fa-box',
+      status_icon:      status_icon      || 'fa-box',
       service,
-      weight:              weight              || null,
+      weight:           weight           || null,
       origin,
       destination,
-      current_location:    resolvedLocation,
-      estimated_delivery:  estimated_delivery  || null,
-      delivered_at:        delivered_at        || null,
-      recipient:           recipient           || null,
-      progress_step:       step,
-      map_lat:             map_lat             || null,
-      map_lng:             map_lng             || null,
-      origin_lat:          origin_lat          || null,
-      origin_lng:          origin_lng          || null,
-      dest_lat:            dest_lat            || null,
-      dest_lng:            dest_lng            || null,
-      pickup_time:         pickup_time         || null,
-      delivery_time:       delivery_time       || null,
-      item_name:           item_name           || null,
+      current_location: resolvedLocation,
+      estimated_delivery: estimated_delivery || null,
+      delivered_at:     delivered_at     || null,
+      recipient:        recipient        || null,
+      progress_step:    step,
+      map_lat:          map_lat          || null,
+      map_lng:          map_lng          || null,
+      origin_lat:       origin_lat       || null,
+      origin_lng:       origin_lng       || null,
+      dest_lat:         dest_lat         || null,
+      dest_lng:         dest_lng         || null,
+      pickup_time:      pickup_time      || null,
+      delivery_time:    delivery_time    || null,
+      item_name:        item_name        || null,
+      // New Delivio fields
+      sender_name:      sender_name      || null,
+      sender_phone:     sender_phone     || null,
+      sender_email:     sender_email     || null,
+      receiver_name:    receiver_name    || null,
+      receiver_phone:   receiver_phone   || null,
+      receiver_email:   receiver_email   || null,
+      receiver_address: receiver_address || null,
+      package_size:     package_size     || null,
+      declared_amount:  declared_amount  || null,
+      special_note:     special_note     || null,
+      service_tags:     service_tags     || null,
     }]).select().single();
 
     if (error) {
@@ -109,15 +149,18 @@ router.post('/shipments', async (req, res, next) => {
 // ===== UPDATE shipment =====
 router.put('/shipments/:id', async (req, res, next) => {
   try {
+    const fields = extractFields(req.body);
     const {
       status, status_label, status_icon, service, weight,
       origin, destination, estimated_delivery,
       delivered_at, recipient, progress_step, map_lat, map_lng,
       origin_lat, origin_lng, dest_lat, dest_lng,
       pickup_time, delivery_time, item_name,
-    } = req.body;
+      sender_name, sender_phone, sender_email,
+      receiver_name, receiver_phone, receiver_email, receiver_address,
+      package_size, declared_amount, special_note, service_tags,
+    } = fields;
 
-    // Validate required fields
     const missing = [];
     if (!status?.trim())       missing.push('status');
     if (!status_label?.trim()) missing.push('status_label');
@@ -129,7 +172,6 @@ router.put('/shipments/:id', async (req, res, next) => {
       return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
     }
 
-    // Fix #50: validate progress_step on PUT too
     if (progress_step !== undefined) {
       const step = parseInt(progress_step);
       if (isNaN(step) || step < 0 || step > 4) {
@@ -137,7 +179,6 @@ router.put('/shipments/:id', async (req, res, next) => {
       }
     }
 
-    // current_location defaults to origin if not provided
     const resolvedLocation = req.body.current_location?.trim() || origin.trim();
 
     const { data, error } = await supabase
@@ -145,23 +186,35 @@ router.put('/shipments/:id', async (req, res, next) => {
       .update({
         status, status_label, status_icon,
         service,
-        weight:             weight             || null,
+        weight:           weight           || null,
         origin,
         destination,
-        current_location:   resolvedLocation,
+        current_location: resolvedLocation,
         estimated_delivery: estimated_delivery || null,
-        delivered_at:       delivered_at       || null,
-        recipient:          recipient          || null,
+        delivered_at:     delivered_at     || null,
+        recipient:        recipient        || null,
         progress_step,
-        map_lat:            map_lat            || null,
-        map_lng:            map_lng            || null,
-        origin_lat:         origin_lat         || null,
-        origin_lng:         origin_lng         || null,
-        dest_lat:           dest_lat           || null,
-        dest_lng:           dest_lng           || null,
-        pickup_time:        pickup_time        || null,
-        delivery_time:      delivery_time      || null,
-        item_name:          item_name          || null,
+        map_lat:          map_lat          || null,
+        map_lng:          map_lng          || null,
+        origin_lat:       origin_lat       || null,
+        origin_lng:       origin_lng       || null,
+        dest_lat:         dest_lat         || null,
+        dest_lng:         dest_lng         || null,
+        pickup_time:      pickup_time      || null,
+        delivery_time:    delivery_time    || null,
+        item_name:        item_name        || null,
+        // New Delivio fields
+        sender_name:      sender_name      || null,
+        sender_phone:     sender_phone     || null,
+        sender_email:     sender_email     || null,
+        receiver_name:    receiver_name    || null,
+        receiver_phone:   receiver_phone   || null,
+        receiver_email:   receiver_email   || null,
+        receiver_address: receiver_address || null,
+        package_size:     package_size     || null,
+        declared_amount:  declared_amount  || null,
+        special_note:     special_note     || null,
+        service_tags:     service_tags     || null,
       })
       .eq('id', req.params.id)
       .select().single();
@@ -179,13 +232,11 @@ router.put('/shipments/:id/location', async (req, res, next) => {
     if (!map_lat || !map_lng) {
       return res.status(400).json({ success: false, error: 'map_lat and map_lng are required' });
     }
-
     const { data, error } = await supabase
       .from('shipments')
       .update({ map_lat, map_lng, current_location })
       .eq('id', req.params.id)
       .select().single();
-
     if (error) throw error;
     res.json({ success: true, shipment: data });
   } catch (err) { next(err); }
@@ -204,25 +255,21 @@ router.delete('/shipments/:id', async (req, res, next) => {
 router.post('/shipments/:id/events', async (req, res, next) => {
   try {
     const { status, location, event_time, is_latest } = req.body;
-
     if (!status?.trim() || !location?.trim()) {
       return res.status(400).json({ success: false, error: 'status and location are required' });
     }
-
     if (is_latest) {
       await supabase.from('tracking_events')
         .update({ is_latest: false })
         .eq('shipment_id', req.params.id);
     }
-
     const { data, error } = await supabase.from('tracking_events').insert([{
-      shipment_id:  req.params.id,
-      status:       status.trim(),
-      location:     location.trim(),
-      event_time:   event_time || new Date().toISOString(),
-      is_latest:    is_latest  || false,
+      shipment_id: req.params.id,
+      status:      status.trim(),
+      location:    location.trim(),
+      event_time:  event_time || new Date().toISOString(),
+      is_latest:   is_latest  || false,
     }]).select().single();
-
     if (error) throw error;
     res.status(201).json({ success: true, event: data });
   } catch (err) { next(err); }
@@ -241,44 +288,33 @@ router.delete('/events/:id', async (req, res, next) => {
 router.post('/shipments/:id/image', async (req, res, next) => {
   try {
     const { base64, mimeType } = req.body;
-
     if (!base64 || !mimeType) {
       return res.status(400).json({ success: false, error: 'base64 and mimeType are required' });
     }
-
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(mimeType)) {
       return res.status(400).json({ success: false, error: 'Only JPEG, PNG, WebP and GIF images are allowed' });
     }
-
     const buffer = Buffer.from(base64, 'base64');
     if (buffer.byteLength > 5 * 1024 * 1024) {
       return res.status(400).json({ success: false, error: 'Image must be under 5MB' });
     }
-
     const ext      = mimeType.split('/')[1];
     const fileName = `${req.params.id}-${Date.now()}.${ext}`;
-
     const { error: uploadErr } = await supabase.storage
       .from('shipment-images')
       .upload(fileName, buffer, { contentType: mimeType, upsert: true });
-
     if (uploadErr) throw uploadErr;
-
     const { data: urlData } = supabase.storage
       .from('shipment-images')
       .getPublicUrl(fileName);
-
     const imageUrl = urlData.publicUrl;
-
     const { data, error: updateErr } = await supabase
       .from('shipments')
       .update({ item_image_url: imageUrl })
       .eq('id', req.params.id)
       .select().single();
-
     if (updateErr) throw updateErr;
-
     res.json({ success: true, item_image_url: imageUrl, shipment: data });
   } catch (err) { next(err); }
 });
@@ -288,20 +324,16 @@ router.delete('/shipments/:id/image', async (req, res, next) => {
   try {
     const { data: shipment } = await supabase
       .from('shipments').select('item_image_url').eq('id', req.params.id).single();
-
     if (shipment?.item_image_url) {
       const parts    = shipment.item_image_url.split('/');
       const fileName = parts[parts.length - 1];
-      // Fix #18: check storage delete error
       const { error: removeErr } = await supabase.storage
         .from('shipment-images').remove([fileName]);
       if (removeErr) console.error('[Storage] Delete failed:', removeErr.message);
     }
-
     await supabase.from('shipments')
       .update({ item_image_url: null })
       .eq('id', req.params.id);
-
     res.json({ success: true, message: 'Image deleted' });
   } catch (err) { next(err); }
 });

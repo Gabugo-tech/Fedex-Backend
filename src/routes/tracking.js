@@ -11,10 +11,12 @@ router.get('/', async (req, res, next) => {
     }
 
     // Parse comma/space separated, max 5, max 60 chars each
+    // Only allow alphanumeric + hyphen characters (rejects XSS/injection attempts)
+    const VALID_PATTERN = /^[A-Z0-9\-]+$/;
     const numbers = raw
       .split(/[\s,]+/)
       .map(n => n.trim().toUpperCase())
-      .filter(n => n.length > 0 && n.length <= 60)
+      .filter(n => n.length > 0 && n.length <= 60 && VALID_PATTERN.test(n))
       .slice(0, 5);
 
     // Fetch all matching shipments in one query
@@ -78,6 +80,18 @@ router.get('/', async (req, res, next) => {
         pickup_time:      shipment.pickup_time    || null,
         delivery_time:    shipment.delivery_time  || null,
         item_name:        shipment.item_name      || null,
+        // Delivio fields
+        sender_name:      shipment.sender_name      || null,
+        sender_phone:     shipment.sender_phone     || null,
+        sender_email:     shipment.sender_email     || null,
+        receiver_name:    shipment.receiver_name    || null,
+        receiver_phone:   shipment.receiver_phone   || null,
+        receiver_email:   shipment.receiver_email   || null,
+        receiver_address: shipment.receiver_address || null,
+        package_size:     shipment.package_size     || null,
+        declared_amount:  shipment.declared_amount  || null,
+        special_note:     shipment.special_note     || null,
+        service_tags:     shipment.service_tags     || null,
         timeline: events.map(e => ({
           date: new Date(e.event_time).toLocaleString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric',
