@@ -71,13 +71,7 @@ router.get('/', async (req, res, next) => {
         progress_step:    shipment.progress_step,
         map_lat:          shipment.map_lat        || null,
         map_lng:          shipment.map_lng        || null,
-        origin_lat:       shipment.origin_lat     || null,
-        origin_lng:       shipment.origin_lng     || null,
-        dest_lat:         shipment.dest_lat       || null,
-        dest_lng:         shipment.dest_lng       || null,
         item_image_url:   shipment.item_image_url || null,
-        pickup_time:      shipment.pickup_time    || null,
-        delivery_time:    shipment.delivery_time  || null,
         item_name:        shipment.item_name      || null,
         // Delivio fields
         sender_name:      shipment.sender_name      || null,
